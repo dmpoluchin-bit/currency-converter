@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💵 Конвертер Валют</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .result-value {
+            font-weight: 700;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .profit {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .loss {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #0066cc;
+            line-height: 1.5;
+        }
+
+        .rate-hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💵 Конвертер Валют</h1>
+        
+        <div class="input-group">
+            <label>💰 Сумма в долларах ($)</label>
+            <input type="number" id="usdAmount" placeholder="2000" value="2000">
+        </div>
+
+        <div class="input-group">
+            <label>🇷🇺 Курс USD → RUB</label>
+            <input type="number" id="usdRub" placeholder="77" value="77" step="0.01">
+            <div class="rate-hint">Сколько рублей за 1 доллар</div>
+        </div>
+
+        <div class="input-group">
+            <label>🇹🇭 Курс USD → THB</label>
+            <input type="number" id="usdThb" placeholder="30.6" value="30.6" step="0.01">
+            <div class="rate-hint">Сколько бат за 1 доллар</div>
+        </div>
+
+        <div class="input-group">
+            <label>🇹🇭 Курс RUB → THB (прямой)</label>
+            <input type="number" id="rubThb" placeholder="2.75" value="2.75" step="0.01">
+            <div class="rate-hint">Сколько рублей за 1 бат</div>
+        </div>
+
+        <div class="input-group">
+            <label>⚠️ Комиссия обменника (%)</label>
+            <input type="number" id="commission" placeholder="0" value="0" step="0.1">
+        </div>
+
+        <button class="btn" onclick="calculate()">🧮 Рассчитать</button>
+
+        <div class="result" id="result">
+            <div class="result-item">
+                <span class="result-label">Затрачено рублей:</span>
+                <span class="result-value" id="rubSpent">0 ₽</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Путь 1: Через USD → THB</span>
+                <span class="result-value" id="path1">0 ฿</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Путь 2: Напрямую RUB → THB</span>
+                <span class="result-value" id="path2">0 ฿</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Эффективный курс (Путь 1):</span>
+                <span class="result-value" id="effRate1">0 ₽/฿</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Эффективный курс (Путь 2):</span>
+                <span class="result-value" id="effRate2">0 ₽/฿</span>
+            </div>
+            
+            <div id="profitBlock"></div>
+        </div>
+
+        <div class="info">
+            💡 <strong>Совет:</strong> Если путь через доллары выгоднее — вы получите больше бат за те же рубли. Учитывайте комиссию при реальном обмене!
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            // Получаем значения
+            const usdAmount = parseFloat(document.getElementById('usdAmount').value) || 0;
+            const usdRub = parseFloat(document.getElementById('usdRub').value) || 0;
+            const usdThb = parseFloat(document.getElementById('usdThb').value) || 0;
+            const rubThb = parseFloat(document.getElementById('rubThb').value) || 0;
+            const commission = parseFloat(document.getElementById('commission').value) || 0;
+
+            // Проверка входных данных
+            if (usdAmount <= 0 || usdRub <= 0 || usdThb <= 0 || rubThb <= 0) {
+                alert('⚠️ Пожалуйста, заполните все поля корректными значениями!');
+                return;
+            }
+
+            // Расчёт затраченных рублей
+            const rubSpent = usdAmount * usdRub;
+
+            // Путь 1: Через доллары (USD → THB)
+            let path1 = usdAmount * usdThb;
+
+            // Путь 2: Напрямую (RUB → THB)
+            let path2 = rubSpent / rubThb;
+
+            // Применяем комиссию (если есть)
+            if (commission > 0) {
+                const commissionFactor = 1 - (commission / 100);
+                path1 = path1 * commissionFactor; // Комиссия на конвертацию USD→THB
+                path2 = path2 * commissionFactor; // Комиссия на конвертацию RUB→THB
+            }
+
+            // Эффективный курс (сколько рублей стоил 1 бат в каждом случае)
+            const effRate1 = rubSpent / path1;
+            const effRate2 = rubSpent / path2;
+
+            // Разница
+            const difference = path1 - path2;
+
+            // Вывод результатов
+            document.getElementById('rubSpent').textContent = rubSpent.toLocaleString('ru-RU', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            }) + ' ₽';
+            
+            document.getElementById('path1').textContent = path1.toLocaleString('ru-RU', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            }) + ' ฿';
+            
+            document.getElementById('path2').textContent = path2.toLocaleString('ru-RU', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            }) + ' ฿';
+
+            document.getElementById('effRate1').textContent = effRate1.toLocaleString('ru-RU', { 
+                minimumFractionDigits: 3, 
+                maximumFractionDigits: 3 
+            }) + ' ₽/฿';
+
+            document.getElementById('effRate2').textContent = effRate2.toLocaleString('ru-RU', { 
+                minimumFractionDigits: 3, 
+                maximumFractionDigits: 3 
+            }) + ' ₽/฿';
+
+            // Блок выгоды/потери
+            const profitBlock = document.getElementById('profitBlock');
+            if (difference > 0) {
+                profitBlock.innerHTML = `
+                    <div class="profit">
+                        ✅ Выгоднее через USD!<br>
+                        +${difference.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿
+                        <br><small>(~${(difference * effRate1).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₽)</small>
+                    </div>
+                `;
+            } else if (difference < 0) {
+                profitBlock.innerHTML = `
+                    <div class="loss">
+                        ❌ Выгоднее напрямую RUB!<br>
+                        ${difference.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿
+                        <br><small>(~${(difference * effRate1).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₽)</small>
+                    </div>
+                `;
+            } else {
+                profitBlock.innerHTML = `
+                    <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 10px; margin-top: 15px; text-align: center; font-weight: 600;">
+                        ⚖️ Оба пути одинаковы
+                    </div>
+                `;
+            }
+
+            // Показываем результат
+            document.getElementById('result').classList.add('show');
+        }
+
+        // Автоматический расчёт при загрузке
+        window.onload = calculate;
+    </script>
+</body>
+</html>
