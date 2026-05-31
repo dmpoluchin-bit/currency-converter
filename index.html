@@ -3,261 +3,329 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💵 Конвертер Валют</title>
+    <title>GPS Трек: Авто-детекция стоянок</title>
     <style>
+        :root { --bg: #f8fafc; --panel: #ffffff; --primary: #2563eb; --parking: #f59e0b; --text: #0f172a; --border: #e2e8f0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: #333;
-        }
-        .container {
-            max-width: 450px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        h1 { text-align: center; color: #667eea; margin: 15px 0 20px; font-size: 22px; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
         
-        .tabs { display: flex; gap: 5px; margin-bottom: 20px; background: #f0f0f0; padding: 5px; border-radius: 12px; }
-        .tab {
-            flex: 1; padding: 10px; text-align: center; border-radius: 10px; cursor: pointer;
-            font-weight: 600; font-size: 14px; transition: all 0.2s; color: #666;
+        .layout { display: flex; height: 100vh; }
+        .sidebar { 
+            width: 340px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px; 
+            display: flex; flex-direction: column; gap: 16px; box-shadow: 2px 0 12px rgba(0,0,0,0.05); z-index: 10; overflow-y: auto; 
         }
-        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .map-wrap { flex: 1; position: relative; }
+        #map { width: 100%; height: 100%; }
         
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; font-size: 14px; }
-        input {
-            width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px;
-            font-size: 15px; transition: border-color 0.3s;
+        h2 { font-size: 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        h3 { font-size: 13px; font-weight: 600; color: #64748b; margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .hint { font-size: 12px; color: #64748b; line-height: 1.4; }
+        
+        input[type="file"], input[type="datetime-local"], input[type="number"] {
+            width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;
         }
-        input:focus { outline: none; border-color: #667eea; }
-        .rate-hint { font-size: 11px; color: #888; margin-top: 3px; }
         
         .btn {
-            width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: 600;
-            cursor: pointer; margin: 15px 0; transition: transform 0.2s;
+            width: 100%; padding: 10px; border: none; border-radius: 6px; 
+            cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; margin-top: 4px;
         }
-        .btn:active { transform: scale(0.98); }
+        .btn:disabled { background: #cbd5e1; cursor: not-allowed; color: #64748b; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
         
-        .result {
-            margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 15px; display: none;
+        .stats { background: #f1f5f9; padding: 12px; border-radius: 6px; font-size: 13px; line-height: 1.6; }
+        .stats span { font-weight: 600; }
+        
+        #statusBox { 
+            font-size: 13px; padding: 8px; border-radius: 6px; background: #f8fafc; border: 1px solid var(--border); 
+            min-height: 36px; display: flex; align-items: center; 
         }
-        .result.show { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .result-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
-        .result-item:last-child { border-bottom: none; }
-        .result-label { color: #666; font-size: 13px; }
-        .result-value { font-weight: 700; color: #333; font-size: 15px; }
+        .divider { height: 1px; background: var(--border); margin: 4px 0; }
         
-        .profit { background: #d4edda; color: #155724; padding: 12px; border-radius: 10px; margin-top: 12px; text-align: center; font-weight: 600; font-size: 14px; }
-        .loss { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 10px; margin-top: 12px; text-align: center; font-weight: 600; font-size: 14px; }
-        .info { margin-top: 15px; padding: 12px; background: #e7f3ff; border-radius: 10px; font-size: 12px; color: #0066cc; line-height: 1.4; }
-        
-        .currency-symbol { font-size: 18px; margin-right: 5px; }
-        .section-title { font-weight: 700; color: #667eea; margin: 10px 0 15px; font-size: 16px; text-align: center; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+        .badge-normal { background: #dbeafe; color: #1e40af; }
+        .badge-parking { background: #fef3c7; color: #92400e; }
     </style>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=d0a762e8-e7fa-44db-909f-d248894b552d&lang=ru_RU"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>💵 Конвертер Валют</h1>
+
+<div class="layout">
+    <aside class="sidebar">
+        <h2>📍 GPS Трек Pro</h2>
         
-        <!-- Вкладки валют -->
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('thb')">🇹🇭 Бат (THB)</div>
-            <div class="tab" onclick="switchTab('eur')">💶 Евро (EUR)</div>
-            <div class="tab" onclick="switchTab('cny')">💴 Юань (CNY)</div>
+        <div>
+            <h3>1. Загрузка файла</h3>
+            <input type="file" id="fileInput" accept=".txt,.csv,.log">
+            <div id="fileInfo" class="hint" style="margin-top:4px;">Файл не выбран</div>
         </div>
 
-        <!-- Общие поля -->
-        <div class="input-group">
-            <label>💰 Сумма в долларах ($)</label>
-            <input type="number" id="usdAmount" placeholder="2000" value="2000">
-        </div>
-        <div class="input-group">
-            <label>🇷🇺 Курс USD → RUB</label>
-            <input type="number" id="usdRub" placeholder="77" value="77" step="0.01">
-            <div class="rate-hint">Сколько рублей за 1 доллар</div>
-        </div>
-        <div class="input-group">
-            <label>⚠️ Комиссия обменника (%)</label>
-            <input type="number" id="commission" placeholder="0" value="0" step="0.1">
+        <div class="divider"></div>
+
+        <div>
+            <h3>2. Параметры расчёта</h3>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Время старта:</label>
+            <input type="datetime-local" id="startTime">
+            
+            <label style="font-size:12px; display:block; margin-top:8px; margin-bottom:4px;">Мин. длительность стоянки (сек):</label>
+            <input type="number" id="parkDuration" value="60" min="10" step="10">
+            <div class="hint" style="margin-top:4px;">Стоянки детектируются автоматически: dist ≤ 20м и speed ≤ 5 км/ч</div>
         </div>
 
-        <!-- Поля для THB -->
-        <div id="section-thb">
-            <div class="section-title">🇹🇭 Настройки для тайского бата</div>
-            <div class="input-group">
-                <label>🇹🇭 Курс USD → THB</label>
-                <input type="number" id="usdThb" placeholder="30.6" value="30.6" step="0.01">
-                <div class="rate-hint">Сколько бат за 1 доллар</div>
-            </div>
-            <div class="input-group">
-                <label>🇹🇭 Курс RUB → THB (прямой)</label>
-                <input type="number" id="rubThb" placeholder="2.75" value="2.75" step="0.01">
-                <div class="rate-hint">Сколько рублей за 1 бат</div>
-            </div>
+        <div class="divider"></div>
+
+        <div>
+            <h3>3. Расчёт и Экспорт</h3>
+            <button class="btn btn-primary" id="calcBtn" disabled>🚀 Рассчитать и Скачать .wln</button>
         </div>
 
-        <!-- Поля для EUR -->
-        <div id="section-eur" style="display:none;">
-            <div class="section-title">💶 Настройки для евро</div>
-            <div class="input-group">
-                <label>💶 Курс USD → EUR</label>
-                <input type="number" id="usdEur" placeholder="0.92" value="0.92" step="0.01">
-                <div class="rate-hint">Сколько евро за 1 доллар</div>
-            </div>
-            <div class="input-group">
-                <label>💶 Курс RUB → EUR (прямой)</label>
-                <input type="number" id="rubEur" placeholder="0.012" value="0.012" step="0.001">
-                <div class="rate-hint">Сколько евро за 1 рубль</div>
-            </div>
+        <div id="statusBox">Ожидание данных...</div>
+
+        <div class="stats">
+            <div>Всего точек: <span id="statTotal">0</span></div>
+            <div>Стоянок найдено: <span id="statParking">0</span> <span id="parkBadge" class="badge badge-parking" style="display:none;">AUTO</span></div>
+            <div>Дистанция: <span id="statDist">0</span> км</div>
         </div>
+    </aside>
 
-        <!-- Поля для CNY -->
-        <div id="section-cny" style="display:none;">
-            <div class="section-title">💴 Настройки для юаня</div>
-            <div class="input-group">
-                <label>💴 Курс USD → CNY</label>
-                <input type="number" id="usdCny" placeholder="7.2" value="7.2" step="0.01">
-                <div class="rate-hint">Сколько юаней за 1 доллар</div>
-            </div>
-            <div class="input-group">
-                <label>💴 Курс RUB → CNY (прямой)</label>
-                <input type="number" id="rubCny" placeholder="0.093" value="0.093" step="0.001">
-                <div class="rate-hint">Сколько юаней за 1 рубль</div>
-            </div>
-        </div>
+    <main class="map-wrap">
+        <div id="map"></div>
+    </main>
+</div>
 
-        <button class="btn" onclick="calculate()">🧮 Рассчитать</button>
+<script>
+    let myMap;
+    let trackPoints = []; 
 
-        <!-- Результаты -->
-        <div class="result" id="result">
-            <div class="result-item">
-                <span class="result-label">Затрачено рублей:</span>
-                <span class="result-value" id="rubSpent">0 ₽</span>
-            </div>
-            <div class="result-item">
-                <span class="result-label" id="path1Label">Путь 1: Через USD → <span id="currency1">THB</span></span>
-                <span class="result-value" id="path1">0</span>
-            </div>
-            <div class="result-item">
-                <span class="result-label" id="path2Label">Путь 2: Напрямую RUB → <span id="currency2">THB</span></span>
-                <span class="result-value" id="path2">0</span>
-            </div>
-            <div class="result-item">
-                <span class="result-label">Эффективный курс (Путь 1):</span>
-                <span class="result-value" id="effRate1">0 ₽/ед.</span>
-            </div>
-            <div class="result-item">
-                <span class="result-label">Эффективный курс (Путь 2):</span>
-                <span class="result-value" id="effRate2">0 ₽/ед.</span>
-            </div>
-            <div id="profitBlock"></div>
-        </div>
+    ymaps.ready(() => {
+        myMap = new ymaps.Map("map", {
+            center: [53.8, 86.8],
+            zoom: 10,
+            controls: ['zoomControl', 'typeSelector']
+        });
+    });
 
-        <div class="info">
-            💡 <strong>Совет:</strong> Сравнивайте оба пути. Если путь через доллары выгоднее — вы получите больше валюты за те же рубли. Учитывайте комиссию при реальном обмене!
-        </div>
-    </div>
-
-    <script>
-        let currentCurrency = 'thb';
+    // UI: Выбор файла
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        document.getElementById('fileInfo').textContent = `✅ ${file.name}`;
+        document.getElementById('calcBtn').disabled = false;
+        document.getElementById('parkBadge').style.display = 'none';
         
-        function switchTab(currency) {
-            currentCurrency = currency;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                trackPoints = parseFile(ev.target.result);
+                document.getElementById('statTotal').textContent = trackPoints.length;
+                setStatus(`✅ Загружено ${trackPoints.length} точек. Укажите время старта.`, 'success');
+            } catch (err) {
+                setStatus(`❌ Ошибка: ${err.message}`, 'error');
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // UI: Кнопка расчёта
+    document.getElementById('calcBtn').addEventListener('click', () => {
+        const startVal = document.getElementById('startTime').value;
+        if (!startVal) return setStatus('⚠️ Укажите дату и время старта', 'error');
+        
+        const minParkSec = parseInt(document.getElementById('parkDuration').value) || 60;
+        
+        try {
+            // 1. Детекция стоянок
+            const parkingClusters = detectParkingClusters(trackPoints);
+            document.getElementById('statParking').textContent = parkingClusters.length;
+            document.getElementById('parkBadge').style.display = parkingClusters.length > 0 ? 'inline-block' : 'none';
             
-            // Переключение вкладок
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+            // 2. Расчёт времени
+            calculateTimestamps(trackPoints, startVal, minParkSec, parkingClusters);
             
-            // Переключение секций
-            document.getElementById('section-thb').style.display = (currency === 'thb') ? 'block' : 'none';
-            document.getElementById('section-eur').style.display = (currency === 'eur') ? 'block' : 'none';
-            document.getElementById('section-cny').style.display = (currency === 'cny') ? 'block' : 'none';
+            // 3. Визуализация
+            renderMap(trackPoints, parkingClusters);
             
-            // Скрыть результат при переключении
-            document.getElementById('result').classList.remove('show');
+            // 4. Экспорт
+            exportWln(trackPoints);
+            
+            let totalDist = 0;
+            for(let i=0; i<trackPoints.length-1; i++) {
+                totalDist += haversineMeters(trackPoints[i].lat, trackPoints[i].lon, trackPoints[i+1].lat, trackPoints[i+1].lon);
+            }
+            document.getElementById('statDist').textContent = (totalDist/1000).toFixed(2);
+            setStatus(`✅ Готово. Найдено стоянок: ${parkingClusters.length}. Файл экспортирован.`, 'success');
+        } catch (err) {
+            setStatus(`❌ Ошибка: ${err.message}`, 'error');
         }
+    });
 
-        function calculate() {
-            const usdAmount = parseFloat(document.getElementById('usdAmount').value) || 0;
-            const usdRub = parseFloat(document.getElementById('usdRub').value) || 0;
-            const commission = parseFloat(document.getElementById('commission').value) || 0;
+    // --- 1. ПАРСИНГ ---
+    function parseFile(text) {
+        const matches = text.match(/-?\d+\.?\d*/g);
+        if (!matches || matches.length < 4) throw new Error('Данные не найдены');
+        const points = [];
+        for (let i = 0; i < matches.length; i += 4) {
+            if (i + 3 >= matches.length) break;
+            points.push({
+                lon: parseFloat(matches[i]), lat: parseFloat(matches[i+1]),
+                speed: parseFloat(matches[i+2]), dir: parseFloat(matches[i+3]),
+                originalLon: matches[i], originalLat: matches[i+1],
+                timestamp: null, isParking: false
+            });
+        }
+        return points;
+    }
+
+    // --- 2. ХАВЕРСИН ---
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = x => x * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // --- 3. ДЕТЕКЦИЯ СТОЯНОК ---
+    function detectParkingClusters(points) {
+        const clusters = [];
+        let current = [];
+        
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i+1];
+            const dist = haversineMeters(p1.lat, p1.lon, p2.lat, p2.lon);
+            // Скорость в файле делится на 10. 5 км/ч = 50 в файле.
+            const isParking = dist <= 20 && (p1.speed / 10) <= 5 && (p2.speed / 10) <= 5;
             
-            let usdToCur, rubToCur, currencyName, currencySymbol;
-            
-            if (currentCurrency === 'thb') {
-                usdToCur = parseFloat(document.getElementById('usdThb').value) || 0;
-                rubToCur = parseFloat(document.getElementById('rubThb').value) || 0;
-                currencyName = 'THB';
-                currencySymbol = '฿';
-            } else if (currentCurrency === 'eur') {
-                usdToCur = parseFloat(document.getElementById('usdEur').value) || 0;
-                rubToCur = parseFloat(document.getElementById('rubEur').value) || 0;
-                currencyName = 'EUR';
-                currencySymbol = '€';
-            } else if (currentCurrency === 'cny') {
-                usdToCur = parseFloat(document.getElementById('usdCny').value) || 0;
-                rubToCur = parseFloat(document.getElementById('rubCny').value) || 0;
-                currencyName = 'CNY';
-                currencySymbol = '¥';
-            }
-            
-            if (usdAmount <= 0 || usdRub <= 0 || usdToCur <= 0 || rubToCur <= 0) {
-                alert('⚠️ Пожалуйста, заполните все поля корректными значениями!');
-                return;
-            }
-            
-            const rubSpent = usdAmount * usdRub;
-            
-            // Путь 1: Через доллары
-            let path1 = usdAmount * usdToCur;
-            // Путь 2: Напрямую за рубли
-            let path2 = rubSpent * rubToCur; // для EUR/CNY: RUB × (EUR/RUB) = EUR
-            
-            // Комиссия
-            if (commission > 0) {
-                const factor = 1 - (commission / 100);
-                path1 *= factor;
-                path2 *= factor;
-            }
-            
-            const effRate1 = rubSpent / path1;
-            const effRate2 = rubSpent / path2;
-            const difference = path1 - path2;
-            
-            // Вывод
-            document.getElementById('rubSpent').textContent = rubSpent.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
-            document.getElementById('currency1').textContent = currencyName;
-            document.getElementById('currency2').textContent = currencyName;
-            document.getElementById('path1Label').innerHTML = `Путь 1: Через USD → ${currencyName}`;
-            document.getElementById('path2Label').innerHTML = `Путь 2: Напрямую RUB → ${currencyName}`;
-            document.getElementById('path1').textContent = path1.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ` ${currencySymbol}`;
-            document.getElementById('path2').textContent = path2.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ` ${currencySymbol}`;
-            document.getElementById('effRate1').textContent = effRate1.toLocaleString('ru-RU', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ` ₽/${currencySymbol}`;
-            document.getElementById('effRate2').textContent = effRate2.toLocaleString('ru-RU', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ` ₽/${currencySymbol}`;
-            
-            const profitBlock = document.getElementById('profitBlock');
-            if (difference > 0.001) {
-                profitBlock.innerHTML = `<div class="profit">✅ Выгоднее через USD!<br>+${difference.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencySymbol}<br><small>(~${(difference * effRate1).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽)</small></div>`;
-            } else if (difference < -0.001) {
-                profitBlock.innerHTML = `<div class="loss">❌ Выгоднее напрямую RUB!<br>${difference.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencySymbol}<br><small>(~${(difference * effRate1).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽)</small></div>`;
+            if (isParking) {
+                if (current.length === 0) current.push(i);
+                if (!current.includes(i+1)) current.push(i+1);
             } else {
-                profitBlock.innerHTML = `<div style="background:#fff3cd;color:#856404;padding:12px;border-radius:10px;margin-top:12px;text-align:center;font-weight:600;font-size:14px;">⚖️ Оба пути одинаковы</div>`;
+                if (current.length > 1) clusters.push([...current]);
+                current = [];
             }
+        }
+        if (current.length > 1) clusters.push([...current]);
+        
+        // Помечаем точки
+        clusters.forEach(c => c.forEach(idx => points[idx].isParking = true));
+        return clusters;
+    }
+
+    // --- 4. РАСЧЁТ ВРЕМЕНИ ---
+    function calculateTimestamps(points, startISO, minParkSec, clusters) {
+        let startMs = new Date(startISO).getTime();
+        points[0].timestamp = startMs;
+        let lastMs = startMs;
+        
+        // Карта для быстрого поиска начала кластера
+        let clusterStartMap = {};
+        clusters.forEach(c => clusterStartMap[c[0]] = c);
+
+        let i = 1;
+        while (i < points.length) {
+            let cluster = clusterStartMap[i];
             
-            document.getElementById('result').classList.add('show');
+            if (cluster) {
+                // Обработка стоянки
+                let endIdx = cluster[cluster.length - 1];
+                let parkMs = minParkSec * 1000;
+                let stepMs = parkMs / (endIdx - i);
+                
+                for (let k = i; k <= endIdx; k++) {
+                    let t;
+                    if (k === i) {
+                        // Начало стоянки: время прибытия + 1 сек
+                        t = lastMs + 1000;
+                    } else {
+                        // Распределение времени равномерно
+                        t = points[k-1].timestamp + stepMs;
+                    }
+                    points[k].timestamp = Math.max(t, lastMs + 100);
+                    lastMs = points[k].timestamp;
+                }
+                i = endIdx + 1;
+            } else {
+                // Обычная физическая модель
+                let dist = haversineMeters(points[i-1].lat, points[i-1].lon, points[i].lat, points[i].lon);
+                let speedKmh = Math.max(points[i-1].speed, points[i].speed) / 10;
+                if (speedKmh < 0.5) speedKmh = 0.5; // защита от деления на 0
+                
+                let dtMs = (dist / 1000 / speedKmh) * 3600000;
+                let t = points[i-1].timestamp + dtMs;
+                points[i].timestamp = Math.max(t, lastMs + 100);
+                lastMs = points[i].timestamp;
+                i++;
+            }
+        }
+    }
+
+    // --- 5. ЭКСПОРТ ---
+    function exportWln(data) {
+        const lines = data.map(p => {
+            const unixSec = Math.floor(p.timestamp / 1000);
+            const speedInt = Math.round(p.speed); // Как в исходном файле
+            const dirInt = Math.round(p.dir);
+            return `REG;${unixSec};${p.originalLon};${p.originalLat};${speedInt};${dirInt};`;
+        }).join('\r\n');
+
+        const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `track_auto_${Date.now()}.wln`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // --- 6. ОТРИСОВКА ---
+    function renderMap(data, clusters) {
+        myMap.geoObjects.removeAll();
+        const collection = new ymaps.GeoObjectCollection();
+        let buffer = [];
+        
+        // Создаём карту кластеров для быстрой проверки
+        let clusterMap = {};
+        clusters.forEach(c => c.forEach(idx => clusterMap[idx] = true));
+
+        for(let i=0; i<data.length-1; i++) {
+            let p1 = data[i];
+            let p2 = data[i+1];
+            buffer.push([p1.lat, p1.lon]);
+            
+            // Если тип сегмента меняется или конец
+            let isCurrentParking = clusterMap[i];
+            let isNextParking = clusterMap[i+1];
+            
+            if (isCurrentParking !== isNextParking || i === data.length - 2) {
+                buffer.push([p2.lat, p2.lon]);
+                if (buffer.length > 1) {
+                    collection.add(new ymaps.Polyline(buffer, {}, {
+                        strokeColor: isCurrentParking ? '#f59e0b' : '#2563eb',
+                        strokeWidth: isCurrentParking ? 5 : 4,
+                        strokeOpacity: 0.85,
+                        strokeStyle: isCurrentParking ? 'dash' : 'solid'
+                    }));
+                }
+                buffer = [];
+            }
         }
         
-        window.onload = calculate;
-    </script>
+        myMap.geoObjects.add(collection);
+        if (data.length > 0) {
+            myMap.setBounds(collection.getBounds(), { checkZoomRange: true, zoomMargin: 40 });
+        }
+    }
+
+    function setStatus(msg, type) {
+        const el = document.getElementById('statusBox');
+        el.textContent = msg;
+        el.style.color = type === 'error' ? '#dc2626' : type === 'success' ? '#16a34a' : '#475569';
+        el.style.borderColor = type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#e2e8f0';
+        el.style.background = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : '#f8fafc';
+    }
+</script>
 </body>
 </html>
